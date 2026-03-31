@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchTranscript } from "youtube-transcript";
-import Anthropic from "@anthropic-ai/sdk";
 
 function extractVideoId(url: string): string | null {
   const patterns = [
@@ -14,6 +13,51 @@ function extractVideoId(url: string): string | null {
     if (match) return match[1];
   }
   return null;
+}
+
+/**
+ * Send a message via OpenClaw's OpenAI-compatible HTTPS API
+ * and collect the full response.
+ */
+async function chatViaOpenClaw(prompt: string): Promise<string> {
+  const gatewayUrl = process.env.OPENCLAW_GATEWAY_URL;
+  const token = process.env.OPENCLAW_GATEWAY_TOKEN || "";
+  const model = process.env.OPENCLAW_MODEL || "openclaw/default";
+
+  if (!gatewayUrl) {
+    throw new Error(
+      "OPENCLAW_GATEWAY_URL is not set. Use the public https:// gateway URL for your OpenClaw instance."
+    );
+  }
+
+  const baseUrl = gatewayUrl.replace(/\/+$/, "");
+  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "x-openclaw-scopes": "operator.read,operator.write,operator.admin",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error?.message || data?.error || "OpenClaw chat completion request failed"
+    );
+  }
+
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text || typeof text !== "string") {
+    throw new Error("OpenClaw response did not include assistant content");
+  }
+
+  return text;
 }
 
 export async function POST(req: NextRequest) {
@@ -51,16 +95,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Call Claude
-    const client = new Anthropic();
-
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: `You are an expert content analyst. Analyze the following YouTube video transcript and return a JSON object with this exact structure (no markdown, just raw JSON):
+    const prompt = `You are an expert content analyst. Analyze the following YouTube video transcript and return a JSON object with this exact structure (no markdown, just raw JSON):
 
 {
   "title": "A compelling title for the video content",
@@ -83,13 +118,19 @@ Rules:
 - Use varied colorClass values from the list provided
 
 TRANSCRIPT:
-${transcript}`,
-        },
-      ],
-    });
+${transcript}`;
 
-    const text =
-      message.content[0].type === "text" ? message.content[0].text : "";
+    // Call OpenClaw via HTTPS /v1/chat/completions
+    let text: string;
+    try {
+      text = await chatViaOpenClaw(prompt);
+    } catch (err) {
+      console.error("OpenClaw error:", err);
+      return NextResponse.json(
+        { error: `AI service error: ${err instanceof Error ? err.message : "Unknown"}` },
+        { status: 502 }
+      );
+    }
 
     // Parse JSON from response
     let analysis;
