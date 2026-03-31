@@ -20,13 +20,13 @@ function extractVideoId(url: string): string | null {
  * and collect the full response.
  */
 async function chatViaOpenClaw(prompt: string): Promise<string> {
-  const gatewayUrl = process.env.OPENCLAW_GATEWAY_URL;
-  const token = process.env.OPENCLAW_GATEWAY_TOKEN || "";
+  const gatewayUrl = process.env.OPENCLAW_URL;
+  const token = process.env.OPENCLAW_TOKEN || "";
   const model = process.env.OPENCLAW_MODEL || "openclaw/default";
 
   if (!gatewayUrl) {
     throw new Error(
-      "OPENCLAW_GATEWAY_URL is not set. Use the public https:// gateway URL for your OpenClaw instance."
+      "OPENCLAW_URL is not set. Use the public https:// gateway URL for your OpenClaw instance."
     );
   }
 
@@ -48,7 +48,7 @@ async function chatViaOpenClaw(prompt: string): Promise<string> {
 
   if (!response.ok) {
     throw new Error(
-      data?.error?.message || data?.error || "OpenClaw chat completion request failed"
+      data?.error?.message || data?.error || `OpenClaw request failed (${response.status})`
     );
   }
 

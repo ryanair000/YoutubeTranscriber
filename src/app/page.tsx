@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { SummarySection } from "@/components/SummarySection";
@@ -73,7 +74,16 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-[#0a0a0a] to-[#0a0a0a]" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-600/10 rounded-full blur-3xl animate-pulse-glow" />
 
-        <div className="relative mx-auto max-w-5xl px-6 pt-16 pb-12">
+        <div className="relative mx-auto max-w-5xl px-6 pt-12 pb-12">
+          {/* Nav */}
+          <nav className="mb-8 flex items-center justify-center gap-4 text-sm">
+            <span className="text-zinc-300">YouTube Summarizer</span>
+            <span className="text-zinc-600">/</span>
+            <Link href="/blog" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+              Blog Generator
+            </Link>
+          </nav>
+
           <div className="text-center">
             <div className="inline-flex items-center gap-2 rounded-full bg-purple-500/10 border border-purple-500/20 px-4 py-1.5 text-sm font-medium text-purple-300 mb-6">
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
